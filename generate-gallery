@@ -1,0 +1,149 @@
+#!/bin/bash -ue
+
+: ${MYSQL:=mysql}
+
+usage() {
+  cat >&1 <<EOF
+NAME
+      generate-gallery - Create a static gallery web site with images based on NextCloud tag identifier.
+SYNOPSIS
+      generate-gallery [OPTIONS] DBNAME PREFIX-PATH TAG-ID OUTPUT-PATH
+
+DESCRIPTION
+      Exports tagged images from next cloud database DBNAME and creates a static gallery view at OUTPUT-PATH.
+
+      Use must provide:
+        DBNAME - database name for nextcloud. Only MySQL without authorization is supported right now.
+        PREFIX-PATH - location of nextcloud files. For example: "/var/www/nextcloud/data/username".
+        TAG-ID - images of which tag will be exported.
+        OUTPUT-PATH - directory at which static website is generated.
+
+OPTIONS
+      -h, --help
+            print this help.
+      --force
+            delete OUTPUT-PATH before generation starts.
+
+IMPROVEMENTS
+      - Escaping of MySQL querries,...
+      - Support of user/password for MySQL.
+      - Support all next cloud DB engines.
+      - Support all type of images (not jpg only).
+      - Support more customizations (image sizes, copy original or not,....).
+      - Integrate with next cloud gallery app.
+      - Migrate from bash to safer tool
+EOF
+}
+
+is_pos_num() {
+  test "$1" -eq "$1" -a "$1" -gt "0" 2>/dev/null
+}
+
+FORCE=false
+for i in "$@"; do
+  case $i in
+      -h|--help)
+      usage
+      exit 0
+    ;;
+    --force)
+      FORCE=true
+      shift
+    ;;
+    -*)
+      echo "invalid option '$i'" >&2
+      exit 1
+    ;;
+    *)
+      break
+    ;;
+  esac
+done
+
+if [ "$#" -lt 4 ]; then
+  echo "Not enough options"
+  exit 1
+fi
+
+DB=$1
+PREFIX_PATH=$2
+TAG=$3
+BUILD=$4
+
+if [ ! -d "$PREFIX_PATH" ]; then
+  echo "$PREFIX_PATH is not a valid prefix directory"
+  exit 1
+fi
+
+if ! is_pos_num "$TAG"; then
+  echo "$TAG is not a positive number"
+  exit 1
+fi
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+SRC=$SCRIPT_DIR/src
+
+if [ -e "$BUILD" ]; then
+  if [ "$FORCE" = "true" ]; then
+    echo "Removing $BUILD directory"
+    rm -rf "$BUILD"
+  else
+    echo "Output directory already exist. Use option --force to remove it before generation" >&2
+    exit 1
+  fi
+fi
+
+# Create directories for photos
+THUMBNAIL_DIR=$BUILD/thumbnails
+VIEW_DIR=$BUILD/view
+ORIGINAL_DIR=$BUILD/original
+mkdir -p "$THUMBNAIL_DIR"
+mkdir -p "$VIEW_DIR"
+mkdir -p "$ORIGINAL_DIR"
+
+$MYSQL -e "SELECT objectid, systemtagid FROM oc_systemtag_object_mapping WHERE systemtagid=$TAG" "$DB" | while IFS=$'\t' read objectid systemtagid; do
+  if [ "$objectid" == objectid ]; then continue; fi
+
+  $MYSQL -e "SELECT path, storage FROM oc_filecache WHERE fileid=$objectid ORDER BY storage_mtime" "$DB" | while IFS=$'\t' read path storage; do
+    if [ "$path" == "path" ]; then continue; fi
+    original="$PREFIX_PATH/$path"
+
+    thumbnail=$(mktemp "$THUMBNAIL_DIR/XXXXXXXXXXXX.jpg")
+    new_file_name=$(basename "$thumbnail")
+
+    convert -resize 750x750\>  "$original" "$thumbnail"
+    touch "$thumbnail" -r "$original"
+    chmod 0644 "$thumbnail"
+
+    view_file=$VIEW_DIR/$new_file_name
+    convert -resize 1500x1500\>  "$original" "$view_file"
+    touch "$view_file" -r "$original"
+    chmod 0644 "$view_file"
+
+    # TODO: 1. consider soft link instead of copy
+    # TODO: 2. consider not creating originals at all (or reusing thumbnails)
+    new_original=$ORIGINAL_DIR/$new_file_name
+    cp "$original" "$new_original"
+    touch "$new_original" -r "$original"
+    chmod 0644 "$new_original"
+
+  done
+done
+
+
+# Copy static files
+cp -r "$SRC/static" "$BUILD"
+cp "$SRC/index-before.html" "$BUILD/index.html"
+
+# ADD HREFS
+for i in "$THUMBNAIL_DIR"/*.jpg; do
+  fname=$(basename "$i")
+  thumbnail="thumbnails/$fname"
+  view="view/$fname"
+  original="original/$fname"
+  echo "<a href=\"$view\" data-ngthumb=\"$thumbnail\" data-ngdownloadurl=\"$original\" ></a>" >>"$BUILD/index.html"
+done
+
+# Finalize some files
+cat "$SRC/index-after.html" >>"$BUILD/index.html"
+
