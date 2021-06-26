@@ -18,11 +18,18 @@ DESCRIPTION
         TAG-ID - images of which tag will be exported.
         OUTPUT-PATH - directory at which static website is generated.
 
+      In generated website 3 main folders are created:
+        - thumbnails contains small thumbnails visible on the main stream view;
+        - view contains  medium size images when a user clicks on a thumbnail;
+	- original contains either original images OR nothing (it is controled with --originals flag).
+
 OPTIONS
       -h, --help
             print this help.
       --force
             delete OUTPUT-PATH before generation starts.
+      -o,--originals
+            Allow originals to be downloaded. By default only view-thumbnails are for download.
 
 IMPROVEMENTS
       - Escaping of MySQL querries,...
@@ -40,6 +47,7 @@ is_pos_num() {
 }
 
 FORCE=false
+DOWNLOAD_ORIGINALS=false
 for i in "$@"; do
   case $i in
       -h|--help)
@@ -48,6 +56,10 @@ for i in "$@"; do
     ;;
     --force)
       FORCE=true
+      shift
+    ;;
+    -o|--originals)
+      DOWNLOAD_ORIGINALS=true
       shift
     ;;
     -*)
@@ -120,12 +132,13 @@ $MYSQL -e "SELECT objectid, systemtagid FROM oc_systemtag_object_mapping WHERE s
     touch "$view_file" -r "$original"
     chmod 0644 "$view_file"
 
-    # TODO: 1. consider soft link instead of copy
-    # TODO: 2. consider not creating originals at all (or reusing thumbnails)
-    new_original=$ORIGINAL_DIR/$new_file_name
-    cp "$original" "$new_original"
-    touch "$new_original" -r "$original"
-    chmod 0644 "$new_original"
+    if [ "$DOWNLOAD_ORIGINALS" == "true" ]; then
+      # TODO: Consider soft link instead of copy
+      new_original=$ORIGINAL_DIR/$new_file_name
+      cp "$original" "$new_original"
+      touch "$new_original" -r "$original"
+      chmod 0644 "$new_original"
+    fi
 
   done
 done
@@ -140,7 +153,10 @@ for i in "$THUMBNAIL_DIR"/*.jpg; do
   fname=$(basename "$i")
   thumbnail="thumbnails/$fname"
   view="view/$fname"
-  original="original/$fname"
+  original=$view
+  if [ "$DOWNLOAD_ORIGINALS" == "true" ]; then
+    original="original/$fname"
+  fi
   echo "<a href=\"$view\" data-ngthumb=\"$thumbnail\" data-ngdownloadurl=\"$original\" ></a>" >>"$BUILD/index.html"
 done
 
