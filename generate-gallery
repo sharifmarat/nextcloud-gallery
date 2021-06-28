@@ -21,15 +21,17 @@ DESCRIPTION
       In generated website 3 main folders are created:
         - thumbnails contains small thumbnails visible on the main stream view;
         - view contains  medium size images when a user clicks on a thumbnail;
-	- original contains either original images OR nothing (it is controled with --originals flag).
+        - original contains either original images OR nothing (it is controled with --originals flag).
 
 OPTIONS
       -h, --help
             print this help.
       --force
             delete OUTPUT-PATH before generation starts.
-      -o,--originals
+      --originals
             Allow originals to be downloaded. By default only view-thumbnails are for download.
+      --limit <NUM>
+            Limit number of converted images to NUM.
 
 IMPROVEMENTS
       - Escaping of MySQL querries,...
@@ -48,7 +50,10 @@ is_pos_num() {
 
 FORCE=false
 DOWNLOAD_ORIGINALS=false
-for i in "$@"; do
+LIMIT_QUERRY=
+while [[ $# -gt 0 ]]; do
+  i="$1"
+  echo "parsing $i"
   case $i in
       -h|--help)
       usage
@@ -58,9 +63,18 @@ for i in "$@"; do
       FORCE=true
       shift
     ;;
-    -o|--originals)
+    --originals)
       DOWNLOAD_ORIGINALS=true
       shift
+    ;;
+    --limit)
+      LIMIT="$2"
+      if ! is_pos_num "$LIMIT"; then
+        echo "limit NUM must be a positive integer" >&2
+        exit 1
+      fi
+      shift 2
+      LIMIT_QUERRY="LIMIT $LIMIT"
     ;;
     -*)
       echo "invalid option '$i'" >&2
@@ -113,10 +127,11 @@ mkdir -p "$THUMBNAIL_DIR"
 mkdir -p "$VIEW_DIR"
 mkdir -p "$ORIGINAL_DIR"
 
-$MYSQL -e "SELECT objectid, systemtagid FROM oc_systemtag_object_mapping WHERE systemtagid=$TAG" "$DB" | while IFS=$'\t' read objectid systemtagid; do
+# TODO: sorting by something
+$MYSQL -e "SELECT objectid, systemtagid FROM oc_systemtag_object_mapping WHERE systemtagid=$TAG $LIMIT_QUERRY" "$DB" | while IFS=$'\t' read objectid systemtagid; do
   if [ "$objectid" == objectid ]; then continue; fi
 
-  $MYSQL -e "SELECT path, storage FROM oc_filecache WHERE fileid=$objectid ORDER BY storage_mtime" "$DB" | while IFS=$'\t' read path storage; do
+  $MYSQL -e "SELECT path, storage FROM oc_filecache WHERE fileid=$objectid" "$DB" | while IFS=$'\t' read path storage; do
     if [ "$path" == "path" ]; then continue; fi
     original="$PREFIX_PATH/$path"
 
