@@ -173,8 +173,9 @@ $MYSQL -e "SELECT $COLUMNS $FROM_WHERE $ORDER_BY $LIMIT_QUERRY" "$DB" | while IF
 
   done
 done
-echo
 
+# Print an empty line to output more text from a new line
+echo
 
 # Copy static files
 cp -r "$SRC/static" "$TMP_DIR"
