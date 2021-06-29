@@ -37,7 +37,6 @@ IMPROVEMENTS
       - Escaping of MySQL querries,...
       - Support of user/password for MySQL.
       - Support all next cloud DB engines.
-      - Support all type of images (not jpg only).
       - Support more customizations (image sizes, copy original or not,....).
       - Integrate with next cloud gallery app.
       - Migrate from bash to safer tool
@@ -53,7 +52,6 @@ DOWNLOAD_ORIGINALS=false
 LIMIT_QUERRY=
 while [[ $# -gt 0 ]]; do
   i="$1"
-  echo "parsing $i"
   case $i in
       -h|--help)
       usage
@@ -109,33 +107,51 @@ fi
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 SRC=$SCRIPT_DIR/src
 
-if [ -e "$BUILD" ]; then
-  if [ "$FORCE" = "true" ]; then
-    echo "Removing $BUILD directory"
-    rm -rf "$BUILD"
-  else
-    echo "Output directory already exist. Use option --force to remove it before generation" >&2
-    exit 1
-  fi
+if [ -e "$BUILD" -a "$FORCE" = "false" ]; then
+  echo "Output directory already exist. Use option --force to remove it before generation" >&2
+  exit 1
 fi
 
-# Create directories for photos
-THUMBNAIL_DIR=$BUILD/thumbnails
-VIEW_DIR=$BUILD/view
-ORIGINAL_DIR=$BUILD/original
+# Create temporary directories for photos
+TMP_DIR=$(mktemp -d)
+SWAP_DIR=$(mktemp -d)
+
+function finish {
+  echo "Clean up of tmp dirs"
+  rm -rf "$TMP_DIR" "$SWAP_DIR"
+}
+trap finish EXIT
+
+# Work in TMP dir before replacing/creating output dir
+chmod 0755 "$TMP_DIR"
+THUMBNAIL_DIR=$TMP_DIR/thumbnails
+VIEW_DIR=$TMP_DIR/view
+ORIGINAL_DIR=$TMP_DIR/original
 mkdir -p "$THUMBNAIL_DIR"
 mkdir -p "$VIEW_DIR"
 mkdir -p "$ORIGINAL_DIR"
 
-# TODO: sorting by something
-$MYSQL -e "SELECT objectid, systemtagid FROM oc_systemtag_object_mapping WHERE systemtagid=$TAG $LIMIT_QUERRY" "$DB" | while IFS=$'\t' read objectid systemtagid; do
+# TODO: order by something more meaningful
+FROM_WHERE="FROM oc_systemtag_object_mapping WHERE systemtagid=$TAG"
+ORDER_BY="ORDER BY objectid"
+COUNT_SELECT="SELECT COUNT(*) FROM (SELECT * FROM oc_systemtag_object_mapping WHERE systemtagid=$TAG $LIMIT_QUERRY) as qqqqq";
+COLUMNS="objectid, systemtagid, ROW_NUMBER() OVER () AS ind, ($COUNT_SELECT) AS total"
+$MYSQL -e "SELECT $COLUMNS $FROM_WHERE $ORDER_BY $LIMIT_QUERRY" "$DB" | while IFS=$'\t' read objectid systemtagid ind total; do
   if [ "$objectid" == objectid ]; then continue; fi
+  echo -ne "\rProcessing image $ind out of $total... "
 
   $MYSQL -e "SELECT path, storage FROM oc_filecache WHERE fileid=$objectid" "$DB" | while IFS=$'\t' read path storage; do
     if [ "$path" == "path" ]; then continue; fi
     original="$PREFIX_PATH/$path"
 
-    thumbnail=$(mktemp "$THUMBNAIL_DIR/XXXXXXXXXXXX.jpg")
+    if [ ! -f "$original" ]; then
+      echo "Path $original does not exist. Check your prefix." >&2
+      exit 1;
+    fi
+
+    md5=$(md5sum "$original" | awk '{print $1}')
+    extension="${original##*.}"
+    thumbnail="$THUMBNAIL_DIR/$md5.$extension"
     new_file_name=$(basename "$thumbnail")
 
     convert -resize 750x750\>  "$original" "$thumbnail"
@@ -157,14 +173,15 @@ $MYSQL -e "SELECT objectid, systemtagid FROM oc_systemtag_object_mapping WHERE s
 
   done
 done
+echo
 
 
 # Copy static files
-cp -r "$SRC/static" "$BUILD"
-cp "$SRC/index-before.html" "$BUILD/index.html"
+cp -r "$SRC/static" "$TMP_DIR"
+cp "$SRC/index-before.html" "$TMP_DIR/index.html"
 
 # ADD HREFS
-for i in "$THUMBNAIL_DIR"/*.jpg; do
+for i in "$THUMBNAIL_DIR"/*; do
   fname=$(basename "$i")
   thumbnail="thumbnails/$fname"
   view="view/$fname"
@@ -172,9 +189,17 @@ for i in "$THUMBNAIL_DIR"/*.jpg; do
   if [ "$DOWNLOAD_ORIGINALS" == "true" ]; then
     original="original/$fname"
   fi
-  echo "<a href=\"$view\" data-ngthumb=\"$thumbnail\" data-ngdownloadurl=\"$original\" ></a>" >>"$BUILD/index.html"
+  echo "<a href=\"$view\" data-ngthumb=\"$thumbnail\" data-ngdownloadurl=\"$original\" ></a>" >>"$TMP_DIR/index.html"
 done
 
 # Finalize some files
-cat "$SRC/index-after.html" >>"$BUILD/index.html"
+cat "$SRC/index-after.html" >>"$TMP_DIR/index.html"
 
+# Swap tmp dir with target dir
+if [ -e "$BUILD" ]; then
+  echo "Moving original build to tmp $SWAP_DIR"
+  mv "$BUILD" "$SWAP_DIR"
+fi
+
+echo "Finalizing $BUILD dir"
+mv "$TMP_DIR" "$BUILD"
