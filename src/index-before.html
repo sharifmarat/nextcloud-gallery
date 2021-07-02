@@ -7,50 +7,86 @@
     <title>Gallery</title>
     <meta name="description" content="">
     <meta name="author" content="None">
-    <meta name="viewport" content="width=device-width">
-    <link rel="stylesheet" href="static/default-skin/default-skin.css">
-    <link rel="stylesheet" href="static/styles.css">
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
     <link rel="stylesheet" href="static/css/nanogallery2.min.css">
-    <script src="static/jquery-3.3.1.min.js"></script>
+    <script src="static/jquery-3.6.0.min.js"></script>
     <script src="static/jquery.nanogallery2.min.js"></script>
-    <script src="static/echo/echo.min.js"></script>
   </head>
-  <body>
+  <body style="background-color:black;">
   <div class="container">
-	<h1>Stream Gallery</h1>
 
         <div class="content">
 
     <div class="my_nanogallery2" data-nanogallery2='{
-      "thumbnailWidth":560,
-      "thumbnailHeight":420,
-      "galleryMosaic" : [
-        { "w": 2, "h": 2, "r": 1, "c": 1 },
-        { "w": 1, "h": 1, "r": 1, "c": 3 },
-        { "w": 1, "h": 2, "r": 1, "c": 4 },
-        { "w": 1, "h": 1, "r": 2, "c": 3 },
+          "galleryMosaic" : [
+            { "w": 2, "h": 2, "c": 1, "r": 1 },
+            { "w": 1, "h": 1, "c": 3, "r": 1 },
+            { "w": 1, "h": 1, "c": 3, "r": 2 },
+            { "w": 1, "h": 2, "c": 4, "r": 1 },
+            { "w": 2, "h": 1, "c": 5, "r": 1 },
+            { "w": 2, "h": 2, "c": 5, "r": 2 },
+            { "w": 1, "h": 1, "c": 4, "r": 3 },
+            { "w": 2, "h": 1, "c": 2, "r": 3 },
+            { "w": 1, "h": 2, "c": 1, "r": 3 },
+            { "w": 1, "h": 1, "c": 2, "r": 4 },
+            { "w": 2, "h": 1, "c": 3, "r": 4 },
+            { "w": 1, "h": 1, "c": 5, "r": 4 },
+            { "w": 1, "h": 1, "c": 6, "r": 4 }
+          ],
+          "galleryMosaicXS" : [
+            { "w": 2, "h": 2, "c": 1, "r": 1 },
+            { "w": 1, "h": 1, "c": 3, "r": 1 },
+            { "w": 1, "h": 1, "c": 3, "r": 2 },
+            { "w": 1, "h": 2, "c": 1, "r": 3 },
+            { "w": 2, "h": 1, "c": 2, "r": 3 },
+            { "w": 1, "h": 1, "c": 2, "r": 4 },
+            { "w": 1, "h": 1, "c": 3, "r": 4 }
+          ],
+          "galleryMosaicSM" : [
+            { "w": 2, "h": 2, "c": 1, "r": 1 },
+            { "w": 1, "h": 1, "c": 3, "r": 1 },
+            { "w": 1, "h": 1, "c": 3, "r": 2 },
+            { "w": 1, "h": 2, "c": 1, "r": 3 },
+            { "w": 2, "h": 1, "c": 2, "r": 3 },
+            { "w": 1, "h": 1, "c": 2, "r": 4 },
+            { "w": 1, "h": 1, "c": 3, "r": 4 }
+          ],
+          "galleryDisplayMode": "fullContent",
+          "gallerySorting": "random",
+          "thumbnailDisplayOrder": "random",
 
-        { "w": 1, "h": 2, "r": 3, "c": 1 },
-        { "w": 2, "h": 2, "r": 3, "c": 2 },
-        { "w": 1, "h": 1, "r": 3, "c": 4 },
-        { "w": 1, "h": 1, "r": 4, "c": 4 }
-      ]}' >
+          "thumbnailHeight": "180",
+          "thumbnailWidth": "220",
+          "thumbnailAlignment": "scaled",
+          "thumbnailGutterWidth": 0,
+          "thumbnailGutterHeight": 0,
+          "thumbnailBorderHorizontal": 2,
+          "thumbnailBorderVertical": 2,
 
-<!-- You can play with different styles of gallery
-      "thumbnailWidth":280,
-      "thumbnailHeight":210,
-      "galleryMosaic" : [
-        { "w": 2, "h": 2, "c": 1, "r": 1 },
-        { "w": 1, "h": 1, "c": 3, "r": 1 },
-        { "w": 1, "h": 1, "c": 3, "r": 2 },
-        { "w": 1, "h": 2, "c": 4, "r": 1 },
-        { "w": 2, "h": 1, "c": 5, "r": 1 },
-        { "w": 2, "h": 2, "c": 5, "r": 2 },
-        { "w": 1, "h": 1, "c": 4, "r": 3 },
-        { "w": 2, "h": 1, "c": 2, "r": 3 },
-        { "w": 1, "h": 2, "c": 1, "r": 3 },
-        { "w": 1, "h": 1, "c": 2, "r": 4 },
-        { "w": 2, "h": 1, "c": 3, "r": 4 },
-        { "w": 1, "h": 1, "c": 5, "r": 4 },
-        { "w": 1, "h": 1, "c": 6, "r": 4 }
-      ]}-->
+          "thumbnailToolbarImage": null,
+          "thumbnailToolbarAlbum": null,
+          "thumbnailLabel": { "display": false },
+
+          "galleryDisplayTransitionDuration": 1500,
+          "thumbnailDisplayTransition": "imageSlideUp",
+          "thumbnailDisplayTransitionDuration": 1200,
+          "thumbnailDisplayTransitionEasing": "easeInOutQuint",
+          "thumbnailDisplayInterval": 60,
+
+          "thumbnailBuildInit2": "image_scale_1.15",
+          "thumbnailHoverEffect2": "thumbnail_scale_1.00_1.05_300|image_scale_1.15_1.00",
+          "touchAnimation": true,
+          "touchAutoOpenDelay": 500,
+
+          "viewerToolbar": { "display": false },
+          "viewerTools":    {
+            "topLeft":   "label",
+            "topRight":  "downloadButton, rotateLeft, rotateRight, fullscreenButton, closeButton"
+          },
+
+          "galleryTheme" : {
+            "thumbnail": { "background": "#111" }
+          },
+
+          "locationHash": true
+      }' >
