@@ -31,6 +31,15 @@ The third argument is tag identifier. You can find all tags in `oc_systemtag` ta
 
 The last argument is where the gallery will be created.
 
+If all works fine you should see something like:
+```
+Processing image 1 out of 3...
+Processing image 2 out of 3...
+Processing image 3 out of 3...
+Finalizing /var/www/your-assome-gallery dir
+Clean up of tmp dirs
+```
+
 2. Point your HTTP server to `/var/www/your-assome-gallery`.
 
 ## Example of generated gallery
